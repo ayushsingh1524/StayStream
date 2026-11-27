@@ -25,7 +25,9 @@
                                                             & Prometheus /metrics
 ```
 
-## System Overview & Guarantees
+---
+
+## Features
 
 | Concern | Implementation | Verified Behavior |
 |---|---|---|
@@ -62,7 +64,7 @@ Events are emitted in JSON format over the Kafka topic `booking-events`:
 
 ---
 
-## Measured Performance & Benchmark (Phase 9)
+## Performance Benchmarks
 
 Benchmarked locally on Apple Silicon (M-series, local Kafka + PySpark 3.5.3 + PostgreSQL):
 
@@ -89,51 +91,123 @@ Over **17,600+ booking events** processed with zero data loss and exact aggregat
 
 ---
 
-## How to Run
+## Project Structure
 
-### 1 · Prerequisites
-- Python 3.11 (`python3 -m venv .venv && source .venv/bin/activate`)
-- Java 21 (`export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home`)
-- Kafka running on `localhost:9092` and PostgreSQL on `localhost:5432` (or via `docker compose up -d`)
+```
+StayStream/
+├── .github/workflows/ci.yml        # GitHub Actions CI (lint + test)
+├── Dockerfile                       # Container image for the pipeline
+├── docker-compose.yml               # Kafka + Postgres + Spark + Dashboard
+├── Makefile                         # Convenience targets (make job, make dashboard, etc.)
+├── requirements.txt
+├── sql/init.sql                     # DDL schema for Postgres tables
+│
+├── src/
+│   ├── common/config.py             # All env-var configuration with safe defaults
+│   ├── producer/generate_events.py  # Fake event producer with --rate, --dup-rate, --cancel-rate, etc.
+│   ├── streaming/
+│   │   ├── schema.py                # Spark StructType for booking event JSON
+│   │   ├── transforms.py            # parse_events() + aggregate_per_minute()
+│   │   ├── sinks.py                 # Idempotent Postgres upsert & DLQ writer
+│   │   └── job.py                   # Main streaming entry point (two queries: metrics + DLQ)
+│   └── dashboard/
+│       ├── app.py                   # FastAPI application factory
+│       ├── db.py                    # DB query helpers & Spark progress reader
+│       ├── routes/
+│       │   ├── api.py               # /api/summary, /api/cities, /api/timeseries, /api/dlq
+│       │   ├── metrics.py           # /metrics (Prometheus exposition format)
+│       │   └── pages.py             # HTML page routes (/, /cities, /dlq)
+│       └── static/
+│           ├── index.html           # Overview dashboard page
+│           ├── cities.html          # City analytics page
+│           ├── dlq.html             # DLQ inspector with reason filter
+│           └── js/                  # Modular JS (common.js, overview.js, cities.js, dlq.js)
+│
+└── tests/
+    ├── test_transforms.py           # 15 unit tests (parse, aggregate, dedup, cancel, DLQ)
+    ├── test_pipeline_local.py       # 3 integration tests (batch mode)
+    └── test_dashboard.py            # 4 API & page tests (mocked DB)
+```
 
-### 2 · Install Dependencies
+---
+
+## Getting Started
+
+### Option A — Docker Compose (recommended)
+
+```bash
+git clone https://github.com/ayushsingh1524/StayStream.git
+cd StayStream
+
+# Start Kafka, PostgreSQL, Spark streaming job, and Dashboard
+docker compose up -d
+
+# Wait ~20s for services to initialise, then produce events
+pip install confluent-kafka faker
+python -m src.producer.generate_events --rate 20 --duration 60
+
+# Open the live dashboard
+open http://localhost:8000
+```
+
+### Option B — Local Setup
+
+#### 1 · Prerequisites
+
+- **Python 3.9+** — create a virtualenv: `python3 -m venv .venv && source .venv/bin/activate`
+- **Java 21** — required by PySpark 3.5.x
+  - macOS: `brew install openjdk@21` then `export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home`
+  - Linux: `sudo apt install openjdk-21-jdk`
+- **Apache Kafka** running on `localhost:9092`
+- **PostgreSQL** running on `localhost:5432`
+
+#### 2 · Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3 · Create Kafka Topic & Database Schema
-```bash
-# If using local Kafka:
-kafka-topics --create --topic booking-events --partitions 3 --replication-factor 1 --bootstrap-server localhost:9092
+#### 3 · Create Kafka Topic & Database Schema
 
-# Apply DDL schema to PostgreSQL:
+```bash
+kafka-topics.sh --create --topic booking-events \
+  --partitions 3 --replication-factor 1 \
+  --bootstrap-server localhost:9092
+
 psql -h localhost -p 5432 -U stream -d staystream -f sql/init.sql
 ```
 
-### 4 · Run Lint & Test Suite
+#### 4 · Run Lint & Tests
+
 ```bash
 ruff check src tests
 pytest -q --tb=short
-# 22 passed in ~11s
+# 22 passed
 ```
 
-### 5 · Start the PySpark Structured Streaming Job
+#### 5 · Start the Streaming Job
+
 ```bash
 python -m src.streaming.job
 ```
 
-### 6 · Start the Live Web Dashboard (new terminal)
+#### 6 · Start the Dashboard (new terminal)
+
 ```bash
 uvicorn src.dashboard.app:app --host 0.0.0.0 --port 8000 --reload
-# Open http://localhost:8000 (or http://localhost:8000/metrics for Prometheus)
+# Overview:   http://localhost:8000
+# Cities:     http://localhost:8000/cities
+# DLQ:        http://localhost:8000/dlq
+# Prometheus: http://localhost:8000/metrics
 ```
 
-### 7 · Run the Event Producer (Simulate Real-Time Traffic)
+#### 7 · Produce Events (new terminal)
+
 ```bash
-# Clean real-time events (20 events/sec for 60 seconds)
+# Normal traffic
 python -m src.producer.generate_events --rate 20 --duration 60
 
-# Stress test with duplicates, late data, cancellations, and malformed records
+# Stress test with duplicates, late events, cancellations, and bad data
 python -m src.producer.generate_events \
   --rate 100 --duration 30 \
   --dup-rate 0.10 \
@@ -142,20 +216,19 @@ python -m src.producer.generate_events \
   --bad-rate 0.05
 ```
 
-### 7 · Query Aggregates & Dead-Letter Queue
+#### 8 · Query Results
+
 ```bash
 psql -h localhost -p 5432 -U stream -d staystream -c \
-  "SELECT city, bookings, revenue, window_start, window_end FROM booking_metrics_per_minute ORDER BY window_start DESC LIMIT 10;"
+  "SELECT city, bookings, cancellations, revenue, window_start
+   FROM booking_metrics_per_minute ORDER BY window_start DESC LIMIT 10;"
 
 psql -h localhost -p 5432 -U stream -d staystream -c \
-  "SELECT * FROM booking_events_dlq ORDER BY id DESC LIMIT 5;"
+  "SELECT id, reason, received_at FROM booking_events_dlq ORDER BY id DESC LIMIT 5;"
 ```
 
 ---
 
-## Resume Bullets
+## License
 
-- **Built an end-to-end real-time booking analytics pipeline** using Apache Kafka, PySpark Structured Streaming, and PostgreSQL, processing high-velocity hotel reservation events partitioned by city.
-- **Implemented exactly-once semantics and restart safety** via event-ID deduplication, 2-minute event-time watermarking, micro-batch checkpoints, and idempotent database upserts (`ON CONFLICT DO UPDATE`).
-- **Engineered resilient stream processing** routing invalid and malformed JSON payloads into an isolated Dead-Letter Queue (DLQ) table without halting streaming queries.
-- **Benchmarked pipeline throughput** sustaining **4,800+ processed rows/sec** with sub-second batch durations; built a live FastAPI + Chart.js monitoring dashboard (`/metrics` + e2e latency) with **22 pytest tests**, Ruff linting, and GitHub Actions CI.
+This project is for educational and portfolio purposes.
