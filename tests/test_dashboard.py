@@ -45,6 +45,7 @@ def test_api_summary_and_prometheus_metrics(mock_one, mock_spark):
             "freshness_seconds": 3.2,
         },
         {"dlq_count": 5},
+        {"active_alerts": 2},
     ]
     mock_spark.return_value = {
         "num_input_rows": 40,
@@ -60,6 +61,7 @@ def test_api_summary_and_prometheus_metrics(mock_one, mock_spark):
     assert data["total_bookings"] == 250
     assert data["total_cancellations"] == 12
     assert data["dlq_count"] == 5
+    assert data["active_alerts"] == 2
     assert data["spark_progress"]["processed_rows_per_second"] == 850.5
 
     mock_one.side_effect = [
@@ -71,11 +73,13 @@ def test_api_summary_and_prometheus_metrics(mock_one, mock_spark):
             "freshness_seconds": 3.2,
         },
         {"dlq_count": 5},
+        {"active_alerts": 2},
     ]
     m_resp = client.get("/metrics")
     assert m_resp.status_code == 200
     assert "staystream_bookings_total 250" in m_resp.text
     assert "staystream_spark_processed_rows_per_second 850.50" in m_resp.text
+    assert "staystream_active_alerts 2" in m_resp.text
 
 
 @patch("src.dashboard.routes.api.query_all")
@@ -108,3 +112,28 @@ def test_api_dlq_with_filter(mock_all):
     body = resp.json()
     assert body["items"][0]["reason"] == "invalid_json"
     assert body["breakdown"][0]["count"] == 1
+
+
+@patch("src.dashboard.routes.api.query_all")
+def test_api_alerts(mock_all):
+    ts = datetime(2026, 11, 27, 15, 0, tzinfo=timezone.utc)
+    mock_all.side_effect = [
+        [
+            {
+                "id": 1,
+                "alert_type": "high_cancellation_rate",
+                "city": "Goa",
+                "window_start": ts,
+                "window_end": ts,
+                "details": {"cancel_rate": 0.35, "bookings": 10, "cancellations": 5},
+                "created_at": ts,
+            }
+        ],
+        [{"alert_type": "high_cancellation_rate", "count": 1}],
+    ]
+    resp = client.get("/api/alerts?limit=10")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["items"][0]["alert_type"] == "high_cancellation_rate"
+    assert body["items"][0]["city"] == "Goa"
+    assert body["summary"][0]["count"] == 1

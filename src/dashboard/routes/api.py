@@ -26,9 +26,13 @@ def api_summary() -> dict[str, Any]:
         """
     )
     dlq = query_one("SELECT COUNT(*)::int AS dlq_count FROM booking_events_dlq;")
+    alerts = query_one(
+        "SELECT COUNT(*)::int AS active_alerts FROM booking_alerts WHERE resolved = false;"
+    )
     return {
         **metrics,
         "dlq_count": dlq.get("dlq_count", 0),
+        "active_alerts": alerts.get("active_alerts", 0),
         "spark_progress": read_spark_progress(),
     }
 
@@ -113,3 +117,47 @@ def api_dlq(
         """
     )
     return {"items": items, "breakdown": breakdown}
+
+
+@router.get("/alerts")
+def api_alerts(
+    limit: int = 50,
+    active_only: bool = True,
+) -> dict[str, Any]:
+    if active_only:
+        items = query_all(
+            """
+            SELECT id, alert_type, city, window_start, window_end, details, created_at
+            FROM booking_alerts
+            WHERE resolved = false
+            ORDER BY created_at DESC
+            LIMIT %s;
+            """,
+            (limit,),
+        )
+    else:
+        items = query_all(
+            """
+            SELECT id, alert_type, city, window_start, window_end, details, resolved, created_at
+            FROM booking_alerts
+            ORDER BY created_at DESC
+            LIMIT %s;
+            """,
+            (limit,),
+        )
+
+    for item in items:
+        for ts_key in ("window_start", "window_end", "created_at"):
+            if item.get(ts_key) is not None:
+                item[ts_key] = item[ts_key].isoformat()
+
+    summary = query_all(
+        """
+        SELECT alert_type, COUNT(*)::int AS count
+        FROM booking_alerts
+        WHERE resolved = false
+        GROUP BY alert_type
+        ORDER BY count DESC;
+        """
+    )
+    return {"items": items, "summary": summary}

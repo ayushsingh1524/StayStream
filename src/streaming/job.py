@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from pyspark.sql import SparkSession
 
 from src.common import config
+from src.streaming.alerts import detect_anomalies
 from src.streaming.transforms import aggregate_per_minute, parse_events
 from src.streaming.sinks import upsert_metrics, write_dlq
 
@@ -44,9 +45,11 @@ def build_spark() -> SparkSession:
 
 def write_batch(batch_df, batch_id: int) -> None:
     """
-    foreachBatch handler: collect aggregated rows, upsert to Postgres.
+    foreachBatch handler: collect aggregated rows, upsert to Postgres,
+    then run anomaly detection on the same batch.
     Aggregates are small (one row per city per minute window), so collect() is safe.
     """
+    collected = batch_df.collect()
     rows = [
         (
             r["window"]["start"],
@@ -57,11 +60,14 @@ def write_batch(batch_df, batch_id: int) -> None:
             float(r["revenue"]),
             float(r["avg_latency_ms"]),
         )
-        for r in batch_df.collect()
+        for r in collected
     ]
     if rows:
         logger.info("batch %d: upserting %d metric rows", batch_id, len(rows))
         upsert_metrics(rows)
+
+        # ── Anomaly detection on this micro-batch ─────────────────────────
+        detect_anomalies([r.asDict(recursive=True) for r in collected])
     else:
         logger.debug("batch %d: no rows to upsert", batch_id)
 

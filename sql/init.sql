@@ -25,3 +25,15 @@ CREATE TABLE IF NOT EXISTS booking_events_dlq (
     reason      VARCHAR(200),
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ── Anomaly Alerts ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS booking_alerts (
+    id           BIGSERIAL PRIMARY KEY,
+    alert_type   VARCHAR(100) NOT NULL,
+    city         VARCHAR(100),
+    window_start TIMESTAMPTZ,
+    window_end   TIMESTAMPTZ,
+    details      JSONB NOT NULL DEFAULT '{}',
+    resolved     BOOLEAN NOT NULL DEFAULT false,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);

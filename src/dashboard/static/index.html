@@ -67,6 +67,20 @@
       </a>
     </section>
 
+    <!-- Active Alerts Banner -->
+    <section id="alerts-section" class="hidden">
+      <div class="bg-amber-950/60 border border-amber-700/50 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <h2 class="text-sm font-semibold text-amber-200">Anomaly Alerts</h2>
+            <span id="alert-count-badge" class="text-xs px-2 py-0.5 rounded bg-amber-900 text-amber-300 border border-amber-700">0</span>
+          </div>
+        </div>
+        <div id="alerts-list" class="space-y-2 text-xs"></div>
+      </div>
+    </section>
+
     <!-- Charts -->
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5">

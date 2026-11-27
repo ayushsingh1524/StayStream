@@ -1,8 +1,12 @@
 """
 config.py – All tunables read from environment variables with safe defaults.
-Override with a .env file (python-dotenv) or export in your shell before running.
+Loads a .env file (if present) via python-dotenv before reading os.environ.
 """
 import os
+
+from dotenv import load_dotenv
+
+load_dotenv()  # reads .env in project root (if it exists)
 
 
 def _env(key: str, default: str) -> str:
@@ -34,9 +38,12 @@ CHECKPOINT_DIR       = _env("CHECKPOINT_DIR", "./checkpoints/metrics")
 SPARK_METRICS_FILE   = _env("SPARK_METRICS_FILE", "/tmp/staystream_spark_metrics.json")
 DASHBOARD_PORT       = int(_env("DASHBOARD_PORT", "8000"))
 
+# ── Anomaly detection ─────────────────────────────────────────────────────────
+ALERT_CANCEL_RATE_THRESHOLD = float(_env("ALERT_CANCEL_RATE_THRESHOLD", "0.25"))
+ALERT_COOLDOWN_MINUTES      = int(_env("ALERT_COOLDOWN_MINUTES", "5"))
+
 # ── Kafka connector package (must match PySpark version) ──────────────────────
 PYSPARK_VERSION         = _env("PYSPARK_VERSION", "3.5.3")
 KAFKA_CONNECTOR_PACKAGE = (
     f"org.apache.spark:spark-sql-kafka-0-10_2.12:{PYSPARK_VERSION}"
 )
-
