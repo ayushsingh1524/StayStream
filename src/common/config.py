@@ -15,7 +15,7 @@ KAFKA_TOPIC     = _env("KAFKA_TOPIC", "booking-events")
 
 # ── Postgres ───────────────────────────────────────────────────────────────────
 DB_HOST     = _env("DB_HOST", "localhost")
-DB_PORT     = int(_env("DB_PORT", "5433"))
+DB_PORT     = int(_env("DB_PORT", "5432"))
 DB_NAME     = _env("DB_NAME", "staystream")
 DB_USER     = _env("DB_USER", "stream")
 DB_PASSWORD = _env("DB_PASSWORD", "stream_dev_pw")
