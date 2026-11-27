@@ -8,15 +8,17 @@ PYTEST  := .venv/bin/pytest
 JAVA21 := /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 export JAVA_HOME := $(JAVA21)
 
-.PHONY: help up topic test producer job clean
+.PHONY: help up topic test lint producer job dashboard clean
 
 help:
-	@echo "make up       – start Kafka + Postgres"
-	@echo "make topic    – create booking-events topic"
-	@echo "make test     – run pytest suite"
-	@echo "make producer – run event generator (rate=10/s, 60s)"
-	@echo "make job      – start the PySpark streaming job"
-	@echo "make clean    – remove checkpoints and pyc files"
+	@echo "make up        – start Kafka + Postgres"
+	@echo "make topic     – create booking-events topic"
+	@echo "make test      – run pytest suite"
+	@echo "make lint      – run ruff linter"
+	@echo "make producer  – run event generator (rate=10/s, 60s)"
+	@echo "make job       – start the PySpark streaming job"
+	@echo "make dashboard – start the live FastAPI dashboard on :8000"
+	@echo "make clean     – remove checkpoints and pyc files"
 
 up:
 	docker compose up -d
@@ -35,6 +37,9 @@ topic:
 test:
 	$(PYTEST) -q --tb=short
 
+lint:
+	.venv/bin/ruff check src tests
+
 producer:
 	$(PYTHON) -m src.producer.generate_events \
 	  --rate $(or $(rate),10) --duration $(or $(duration),60) \
@@ -42,6 +47,9 @@ producer:
 
 job:
 	$(PYTHON) -m src.streaming.job
+
+dashboard:
+	.venv/bin/uvicorn src.dashboard.app:app --host 0.0.0.0 --port 8000 --reload
 
 clean:
 	rm -rf checkpoints/ && find . -name "*.pyc" -delete

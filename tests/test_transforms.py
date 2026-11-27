@@ -3,9 +3,7 @@ test_transforms.py – Unit tests for pure transform functions.
 No Kafka, no Postgres. Uses a local SparkSession in batch mode.
 """
 import pytest
-from datetime import datetime, timezone
 from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
 
 from src.streaming.transforms import parse_events, aggregate_per_minute
 
@@ -93,7 +91,6 @@ class TestParseEvents:
     def test_event_time_parsed_to_timestamp(self, spark):
         raw = _raw(spark, [_json()])
         valid, _ = parse_events(raw)
-        from pyspark.sql.types import TimestampType
         assert dict(valid.dtypes)["event_time"] == "timestamp"
 
     def test_multiple_valid_rows(self, spark):
@@ -102,6 +99,17 @@ class TestParseEvents:
         valid, invalid = parse_events(raw)
         assert valid.count() == 5
         assert invalid.count() == 0
+
+    def test_dlq_reasons_classified_accurately(self, spark):
+        raw = _raw(spark, [
+            '{"BROKEN": true, bad json',
+            _json(event_id="m1", city=None),
+            _json(event_id="p1", total_price=-50.0),
+        ])
+        valid, invalid = parse_events(raw)
+        assert valid.count() == 0
+        reasons = sorted(r["reason"] for r in invalid.collect())
+        assert reasons == ["invalid_json", "missing_required_field", "non_positive_price"]
 
 
 # ── aggregate_per_minute tests (batch mode) ────────────────────────────────────
@@ -187,5 +195,21 @@ class TestAggregatePerMinute:
         agg = aggregate_per_minute(valid)
         rows = agg.collect()
         assert rows[0]["bookings"] == 100
+        assert rows[0]["cancellations"] == 0
         assert abs(float(rows[0]["revenue"]) - 10000.0) < 0.01
+
+    def test_cancellations_decrement_net_revenue(self, spark):
+        events = [
+            _json(event_id="c1", city="Goa", event_type="BOOKING_CREATED", total_price=10000.0),
+            _json(event_id="c2", city="Goa", event_type="BOOKING_CREATED", total_price=5000.0),
+            _json(event_id="x1", city="Goa", event_type="BOOKING_CANCELLED", total_price=3000.0),
+        ]
+        raw = _raw(spark, events)
+        valid, _ = parse_events(raw)
+        agg = aggregate_per_minute(valid)
+        rows = agg.collect()
+        assert rows[0]["bookings"] == 2
+        assert rows[0]["cancellations"] == 1
+        assert float(rows[0]["revenue"]) == 12000.0
+        assert float(rows[0]["avg_latency_ms"]) >= 0.0
 

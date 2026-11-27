@@ -3,7 +3,7 @@ schema.py – Spark StructType for a booking event JSON payload.
 """
 from pyspark.sql.types import (
     StructType, StructField,
-    StringType, LongType, DoubleType, TimestampType,
+    StringType, LongType, DoubleType,
 )
 
 EVENT_SCHEMA = StructType([

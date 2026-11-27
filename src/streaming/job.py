@@ -8,9 +8,11 @@ Or, to override config:
     KAFKA_BOOTSTRAP=localhost:9092 TRIGGER_INTERVAL="10 seconds" \\
         python -m src.streaming.job
 """
+import json
 import logging
 import os
 import sys
+from datetime import datetime, timezone
 
 # Allow running from repo root without installing the package
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -18,7 +20,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from pyspark.sql import SparkSession
 
 from src.common import config
-from src.streaming.schema import EVENT_SCHEMA
 from src.streaming.transforms import aggregate_per_minute, parse_events
 from src.streaming.sinks import upsert_metrics, write_dlq
 
@@ -47,7 +48,15 @@ def write_batch(batch_df, batch_id: int) -> None:
     Aggregates are small (one row per city per minute window), so collect() is safe.
     """
     rows = [
-        (r["window"]["start"], r["window"]["end"], r["city"], r["bookings"], float(r["revenue"]))
+        (
+            r["window"]["start"],
+            r["window"]["end"],
+            r["city"],
+            r["bookings"],
+            r["cancellations"],
+            float(r["revenue"]),
+            float(r["avg_latency_ms"]),
+        )
         for r in batch_df.collect()
     ]
     if rows:
@@ -67,13 +76,33 @@ def write_dlq_batch(batch_df, batch_id: int) -> None:
 def log_progress(query) -> None:
     p = query.lastProgress
     if p:
+        input_rows = p.get("numInputRows", 0)
+        input_rate = float(p.get("inputRowsPerSecond", 0.0) or 0.0)
+        processed_rate = float(p.get("processedRowsPerSecond", 0.0) or 0.0)
+        batch_ms = int(p.get("durationMs", {}).get("triggerExecution", 0) or 0)
+
         logger.info(
             "inputRows=%s  inputRate=%.1f/s  processedRate=%.1f/s  batchDuration=%sms",
-            p.get("numInputRows", "?"),
-            p.get("inputRowsPerSecond", 0),
-            p.get("processedRowsPerSecond", 0),
-            p.get("durationMs", {}).get("triggerExecution", "?"),
+            input_rows,
+            input_rate,
+            processed_rate,
+            batch_ms,
         )
+
+        snapshot = {
+            "num_input_rows": input_rows,
+            "input_rows_per_second": input_rate,
+            "processed_rows_per_second": processed_rate,
+            "batch_duration_ms": batch_ms,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        tmp_path = f"{config.SPARK_METRICS_FILE}.tmp"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(snapshot, f)
+            os.replace(tmp_path, config.SPARK_METRICS_FILE)
+        except OSError as exc:
+            logger.debug("could not write spark metrics snapshot: %s", exc)
 
 
 def main() -> None:

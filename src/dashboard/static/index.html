@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StayStream · Real-Time Booking Pipeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Header & Health Banner -->
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="inline-flex h-3 w-3 rounded-full bg-emerald-400 animate-pulse"></span>
+          <h1 class="text-2xl font-bold tracking-tight text-white">StayStream Live</h1>
+          <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+            Kafka → PySpark → PostgreSQL
+          </span>
+        </div>
+        <p class="text-sm text-slate-400 mt-1">
+          Real-time hotel booking metrics · 1-min tumbling windows · 2-min watermark
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-xs">
+        <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
+          <span class="text-slate-400">Spark Rate:</span>
+          <span id="spark-rate" class="font-semibold text-emerald-400 ml-1">0.0 rows/s</span>
+        </div>
+        <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
+          <span class="text-slate-400">Batch:</span>
+          <span id="spark-batch" class="font-semibold text-sky-400 ml-1">0 ms</span>
+        </div>
+        <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
+          <span class="text-slate-400">Freshness:</span>
+          <span id="freshness" class="font-semibold text-slate-200 ml-1">—</span>
+        </div>
+        <a href="/metrics" target="_blank"
+           class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 transition">
+          /metrics
+        </a>
+      </div>
+    </header>
+
+    <!-- KPI Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400">Total Bookings</div>
+        <div id="kpi-bookings" class="text-3xl font-bold text-white mt-1">0</div>
+        <div class="text-xs text-emerald-400 mt-1">Deduplicated by event_id</div>
+      </div>
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400">Net Revenue (INR)</div>
+        <div id="kpi-revenue" class="text-3xl font-bold text-emerald-400 mt-1">₹0</div>
+        <div class="text-xs text-slate-400 mt-1">Created − Cancelled</div>
+      </div>
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400">Cancellations</div>
+        <div id="kpi-cancellations" class="text-3xl font-bold text-amber-400 mt-1">0</div>
+        <div id="kpi-latency" class="text-xs text-slate-400 mt-1">Avg latency: 0 ms</div>
+      </div>
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400">Dead-Letter Queue</div>
+        <div id="kpi-dlq" class="text-3xl font-bold text-rose-400 mt-1">0</div>
+        <div class="text-xs text-slate-400 mt-1">Malformed events isolated</div>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-slate-200 mb-3">Revenue by City</h2>
+        <div class="h-64">
+          <canvas id="cityChart"></canvas>
+        </div>
+      </div>
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-slate-200 mb-3">Bookings &amp; Cancellations per Minute</h2>
+        <div class="h-64">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tables: City Leaderboard + DLQ Inspector -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 overflow-x-auto">
+        <h2 class="text-sm font-semibold text-slate-200 mb-3">City Leaderboard</h2>
+        <table class="w-full text-sm text-left">
+          <thead class="text-xs uppercase text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="py-2 pr-3">City</th>
+              <th class="py-2 pr-3 text-right">Bookings</th>
+              <th class="py-2 pr-3 text-right">Cancels</th>
+              <th class="py-2 pr-3 text-right">Net Revenue</th>
+              <th class="py-2 text-right">Latency</th>
+            </tr>
+          </thead>
+          <tbody id="city-table" class="divide-y divide-slate-800/70"></tbody>
+        </table>
+      </div>
+
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 overflow-x-auto">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-slate-200">DLQ Inspector (Latest Malformed Events)</h2>
+          <div id="dlq-badges" class="flex flex-wrap gap-1.5 text-xs"></div>
+        </div>
+        <table class="w-full text-xs text-left">
+          <thead class="uppercase text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="py-2 pr-2">ID</th>
+              <th class="py-2 pr-2">Reason</th>
+              <th class="py-2">Raw Payload</th>
+            </tr>
+          </thead>
+          <tbody id="dlq-table" class="divide-y divide-slate-800/70 font-mono"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const fmtINR = (v) => "₹" + Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+
+    const cityChart = new Chart(document.getElementById("cityChart"), {
+      type: "bar",
+      data: { labels: [], datasets: [{ label: "Revenue (INR)", data: [], backgroundColor: "#34d399", borderRadius: 6 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: "#94a3b8" }, grid: { display: false } },
+          y: { ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } }
+        }
+      }
+    });
+
+    const trendChart = new Chart(document.getElementById("trendChart"), {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          { label: "Bookings", data: [], borderColor: "#38bdf8", backgroundColor: "rgba(56,189,248,0.15)", fill: true, tension: 0.3 },
+          { label: "Cancellations", data: [], borderColor: "#fbbf24", backgroundColor: "rgba(251,191,36,0.1)", fill: false, tension: 0.3 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: "#cbd5e1" } } },
+        scales: {
+          x: { ticks: { color: "#94a3b8", maxTicksLimit: 8 }, grid: { display: false } },
+          y: { ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } }
+        }
+      }
+    });
+
+    const REASON_COLORS = {
+      invalid_json: "bg-rose-950 text-rose-300 border-rose-800",
+      missing_required_field: "bg-amber-950 text-amber-300 border-amber-800",
+      non_positive_price: "bg-purple-950 text-purple-300 border-purple-800",
+    };
+
+    async function refresh() {
+      try {
+        const [summary, cities, series, dlq] = await Promise.all([
+          fetch("/api/summary").then(r => r.json()),
+          fetch("/api/cities").then(r => r.json()),
+          fetch("/api/timeseries").then(r => r.json()),
+          fetch("/api/dlq").then(r => r.json()),
+        ]);
+
+        document.getElementById("kpi-bookings").textContent = (summary.total_bookings || 0).toLocaleString();
+        document.getElementById("kpi-revenue").textContent = fmtINR(summary.total_revenue);
+        document.getElementById("kpi-cancellations").textContent = (summary.total_cancellations || 0).toLocaleString();
+        document.getElementById("kpi-latency").textContent = `Avg latency: ${Math.round(summary.avg_latency_ms || 0)} ms`;
+        document.getElementById("kpi-dlq").textContent = (summary.dlq_count || 0).toLocaleString();
+
+        const sp = summary.spark_progress || {};
+        document.getElementById("spark-rate").textContent = `${Number(sp.processed_rows_per_second || 0).toFixed(1)} rows/s`;
+        document.getElementById("spark-batch").textContent = `${sp.batch_duration_ms || 0} ms`;
+        const fresh = summary.freshness_seconds;
+        document.getElementById("freshness").textContent = fresh != null ? `${Math.round(fresh)}s ago` : "—";
+
+        cityChart.data.labels = cities.map(c => c.city);
+        cityChart.data.datasets[0].data = cities.map(c => c.revenue);
+        cityChart.update("none");
+
+        trendChart.data.labels = series.map(s => new Date(s.window_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        trendChart.data.datasets[0].data = series.map(s => s.bookings);
+        trendChart.data.datasets[1].data = series.map(s => s.cancellations);
+        trendChart.update("none");
+
+        document.getElementById("city-table").innerHTML = cities.map(c => `
+          <tr class="hover:bg-slate-800/40">
+            <td class="py-2 pr-3 font-medium text-white">${c.city}</td>
+            <td class="py-2 pr-3 text-right">${c.bookings.toLocaleString()}</td>
+            <td class="py-2 pr-3 text-right text-amber-400">${c.cancellations.toLocaleString()}</td>
+            <td class="py-2 pr-3 text-right text-emerald-400 font-medium">${fmtINR(c.revenue)}</td>
+            <td class="py-2 text-right text-slate-400">${Math.round(c.avg_latency_ms || 0)} ms</td>
+          </tr>
+        `).join("");
+
+        document.getElementById("dlq-badges").innerHTML = (dlq.breakdown || []).map(b => {
+          const cls = REASON_COLORS[b.reason] || "bg-slate-800 text-slate-300 border-slate-700";
+          return `<span class="px-2 py-0.5 rounded border ${cls}">${b.reason}: ${b.count}</span>`;
+        }).join("");
+
+        document.getElementById("dlq-table").innerHTML = (dlq.items || []).slice(0, 8).map(d => {
+          const cls = REASON_COLORS[d.reason] || "bg-slate-800 text-slate-300 border-slate-700";
+          const raw = (d.raw_value || "").replace(/</g, "&lt;").slice(0, 70);
+          return `
+            <tr>
+              <td class="py-1.5 pr-2 text-slate-400">#${d.id}</td>
+              <td class="py-1.5 pr-2"><span class="px-1.5 py-0.5 rounded border ${cls}">${d.reason}</span></td>
+              <td class="py-1.5 text-slate-300 truncate max-w-xs">${raw}</td>
+            </tr>
+          `;
+        }).join("");
+      } catch (err) {
+        console.error("Dashboard refresh failed:", err);
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 2500);
+  </script>
+</body>
+</html>

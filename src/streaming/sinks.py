@@ -15,13 +15,15 @@ logger = logging.getLogger(__name__)
 
 _UPSERT_METRICS = """
 INSERT INTO booking_metrics_per_minute
-    (window_start, window_end, city, bookings, revenue)
-VALUES (%s, %s, %s, %s, %s)
+    (window_start, window_end, city, bookings, cancellations, revenue, avg_latency_ms)
+VALUES (%s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (window_start, city)
 DO UPDATE SET
-    bookings   = EXCLUDED.bookings,
-    revenue    = EXCLUDED.revenue,
-    updated_at = now();
+    bookings       = EXCLUDED.bookings,
+    cancellations  = EXCLUDED.cancellations,
+    revenue        = EXCLUDED.revenue,
+    avg_latency_ms = EXCLUDED.avg_latency_ms,
+    updated_at     = now();
 """
 
 _INSERT_DLQ = """
@@ -32,7 +34,7 @@ VALUES (%s, %s);
 
 def upsert_metrics(rows: Sequence[tuple]) -> None:
     """
-    Upsert (window_start, window_end, city, bookings, revenue) tuples.
+    Upsert (window_start, window_end, city, bookings, cancellations, revenue) tuples.
     Running the same batch twice gives the same result.
     """
     if not rows:
@@ -51,4 +53,3 @@ def write_dlq(rows: Sequence[tuple]) -> None:
     with psycopg2.connect(DB_DSN) as conn, conn.cursor() as cur:
         cur.executemany(_INSERT_DLQ, rows)
     logger.info("wrote %d DLQ rows", len(rows))
-

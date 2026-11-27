@@ -30,7 +30,7 @@ services:
       POSTGRES_USER: stream
       POSTGRES_PASSWORD: stream_dev_pw
     ports:
-      - "5433:5432"   # 5433 avoids clash with StayScout's Postgres
+      - "5433:5432"   # 5433 avoids clash with local Postgres
     volumes:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
@@ -39,3 +39,38 @@ services:
       timeout: 5s
       retries: 10
 
+  spark-job:
+    build: .
+    container_name: staystream-spark
+    command: ["python", "-m", "src.streaming.job"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      DB_HOST: postgres
+      DB_PORT: 5432
+      SPARK_METRICS_FILE: /tmp/staystream/spark_metrics.json
+    volumes:
+      - spark_metrics:/tmp/staystream
+      - ./checkpoints:/app/checkpoints
+
+  dashboard:
+    build: .
+    container_name: staystream-dashboard
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      SPARK_METRICS_FILE: /tmp/staystream/spark_metrics.json
+    volumes:
+      - spark_metrics:/tmp/staystream:ro
+
+volumes:
+  spark_metrics:

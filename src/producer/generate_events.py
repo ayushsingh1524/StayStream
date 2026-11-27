@@ -36,7 +36,7 @@ PRICE_RANGE = {
 }
 
 
-def make_event(late: bool = False) -> dict:
+def make_event(late: bool = False, cancel: bool = False) -> dict:
     room_type   = random.choice(ROOM_TYPES)
     nights      = random.randint(1, 7)
     price_night = random.randint(*PRICE_RANGE[room_type])
@@ -50,7 +50,7 @@ def make_event(late: bool = False) -> dict:
 
     return {
         "event_id":    str(uuid.uuid4()),
-        "event_type":  "BOOKING_CREATED",
+        "event_type":  "BOOKING_CANCELLED" if cancel else "BOOKING_CREATED",
         "booking_id":  random.randint(1000, 9_999_999),
         "hotel_id":    random.randint(1, 500),
         "city":        random.choice(CITIES),
@@ -77,7 +77,8 @@ def run(args: argparse.Namespace) -> None:
     sleep_per_event = 1.0 / args.rate
 
     print(f"[StayStream producer] rate={args.rate}/s  duration={args.duration}s  "
-          f"dup={args.dup_rate:.0%}  late={args.late_rate:.0%}  bad={args.bad_rate:.0%}")
+          f"dup={args.dup_rate:.0%}  late={args.late_rate:.0%}  "
+          f"bad={args.bad_rate:.0%}  cancel={args.cancel_rate:.0%}")
 
     try:
         while True:
@@ -99,10 +100,11 @@ def run(args: argparse.Namespace) -> None:
                 producer.produce(args.topic, value=payload, key=city.encode(),
                                  on_delivery=delivery_report)
 
-            # ── Normal (or late) event ────────────────────────────────────────
+            # ── Normal (or late / cancel) event ───────────────────────────────
             else:
-                is_late = random.random() < args.late_rate
-                event   = make_event(late=is_late)
+                is_late   = random.random() < args.late_rate
+                is_cancel = random.random() < args.cancel_rate
+                event     = make_event(late=is_late, cancel=is_cancel)
                 payload = json.dumps(event).encode()
                 city    = event["city"]
                 producer.produce(args.topic, value=payload, key=city.encode(),
@@ -131,7 +133,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--duration",  type=int,   default=60,         help="seconds (0=forever)")
     p.add_argument("--dup-rate",  type=float, default=0.0,        dest="dup_rate")
     p.add_argument("--late-rate", type=float, default=0.0,        dest="late_rate")
-    p.add_argument("--bad-rate",  type=float, default=0.0,        dest="bad_rate")
+    p.add_argument("--bad-rate",    type=float, default=0.0,        dest="bad_rate")
+    p.add_argument("--cancel-rate", type=float, default=0.0,        dest="cancel_rate")
     p.add_argument("--topic",     type=str,   default="booking-events")
     p.add_argument("--bootstrap", type=str,   default="localhost:9092")
     return p.parse_args()

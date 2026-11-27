@@ -31,6 +31,8 @@ WINDOW_DURATION      = _env("WINDOW", "1 minute")
 TRIGGER_INTERVAL     = _env("TRIGGER_INTERVAL", "5 seconds")
 SHUFFLE_PARTITIONS   = int(_env("SHUFFLE_PARTITIONS", "4"))
 CHECKPOINT_DIR       = _env("CHECKPOINT_DIR", "./checkpoints/metrics")
+SPARK_METRICS_FILE   = _env("SPARK_METRICS_FILE", "/tmp/staystream_spark_metrics.json")
+DASHBOARD_PORT       = int(_env("DASHBOARD_PORT", "8000"))
 
 # ── Kafka connector package (must match PySpark version) ──────────────────────
 PYSPARK_VERSION         = _env("PYSPARK_VERSION", "3.5.3")
