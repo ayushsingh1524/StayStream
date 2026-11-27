@@ -1,0 +1,227 @@
+/* StayStream Oceanic Telemetry Theme
+ * Palette:
+ *   Ice Cyan:       #9FE7F5
+ *   Ocean Teal:     #429EBD
+ *   Abyssal Navy:   #053F5C
+ *   Amber Gold:     #F7AD19
+ */
+
+:root {
+  --cyan-ice: #9FE7F5;
+  --teal-ocean: #429EBD;
+  --navy-abyss: #053F5C;
+  --navy-deep: #021824;
+  --navy-card: rgba(5, 63, 92, 0.42);
+  --amber-gold: #F7AD19;
+  --text-primary: #F0FAFC;
+  --text-muted: #8BB8CA;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--navy-deep);
+  color: var(--text-primary);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 15% -10%, rgba(66, 158, 189, 0.22), transparent 60%),
+    radial-gradient(ellipse 60% 45% at 88% 8%, rgba(159, 231, 245, 0.12), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 50% 105%, rgba(5, 63, 92, 0.55), transparent 60%),
+    radial-gradient(rgba(159, 231, 245, 0.06) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 24px 24px;
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, .font-display {
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-mono-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Glassmorphic Surfaces ─────────────────────────────────────────────────── */
+.glass-panel {
+  background: linear-gradient(155deg, rgba(5, 63, 92, 0.52) 0%, rgba(2, 28, 43, 0.78) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(159, 231, 245, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(159, 231, 245, 0.14),
+    0 12px 32px -12px rgba(0, 12, 20, 0.75);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.25s ease,
+              box-shadow 0.25s ease;
+}
+
+.glass-panel-hover:hover {
+  transform: translateY(-3px);
+  border-color: rgba(66, 158, 189, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(159, 231, 245, 0.28),
+    0 18px 40px -12px rgba(66, 158, 189, 0.22);
+}
+
+/* ── KPI Top Accent Bars ───────────────────────────────────────────────────── */
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  opacity: 0.85;
+}
+
+.kpi-cyan::before {
+  background: linear-gradient(90deg, #429EBD, #9FE7F5);
+}
+
+.kpi-teal::before {
+  background: linear-gradient(90deg, #053F5C, #429EBD, #9FE7F5);
+}
+
+.kpi-amber::before {
+  background: linear-gradient(90deg, #F7AD19, #ffd166);
+}
+
+.kpi-coral::before {
+  background: linear-gradient(90deg, #f97316, #F7AD19);
+}
+
+/* ── Navigation Pills ──────────────────────────────────────────────────────── */
+.nav-shell {
+  background: rgba(2, 24, 36, 0.75);
+  border: 1px solid rgba(66, 158, 189, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.nav-pill {
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.nav-pill:hover {
+  color: var(--cyan-ice);
+  background: rgba(66, 158, 189, 0.14);
+}
+
+.nav-pill-active {
+  color: #021824;
+  font-weight: 600;
+  background: linear-gradient(135deg, #9FE7F5 0%, #429EBD 100%);
+  box-shadow: 0 0 18px rgba(66, 158, 189, 0.4);
+}
+
+/* ── Live Sonar Pulse ──────────────────────────────────────────────────────── */
+.sonar-dot {
+  position: relative;
+  display: inline-flex;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background-color: var(--cyan-ice);
+  box-shadow: 0 0 10px var(--cyan-ice);
+}
+
+.sonar-dot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--cyan-ice);
+  animation: sonar-ring 2s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+}
+
+.sonar-dot-amber {
+  background-color: var(--amber-gold);
+  box-shadow: 0 0 10px var(--amber-gold);
+}
+
+.sonar-dot-amber::after {
+  border-color: var(--amber-gold);
+}
+
+@keyframes sonar-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* ── KPI Value Flash on Update ─────────────────────────────────────────────── */
+@keyframes kpi-pulse {
+  0% {
+    text-shadow: 0 0 16px rgba(159, 231, 245, 0.85);
+    transform: scale(1.02);
+  }
+  100% {
+    text-shadow: none;
+    transform: scale(1);
+  }
+}
+
+.kpi-updated {
+  animation: kpi-pulse 0.65s ease-out;
+}
+
+/* ── Alert Banner Glow ─────────────────────────────────────────────────────── */
+.alert-banner {
+  background: linear-gradient(135deg, rgba(247, 173, 25, 0.14) 0%, rgba(5, 63, 92, 0.65) 100%);
+  border: 1px solid rgba(247, 173, 25, 0.45);
+  box-shadow: 0 8px 28px -8px rgba(247, 173, 25, 0.25);
+}
+
+/* ── Telemetry Chips ───────────────────────────────────────────────────────── */
+.telemetry-chip {
+  background: rgba(5, 63, 92, 0.48);
+  border: 1px solid rgba(66, 158, 189, 0.28);
+  box-shadow: inset 0 1px 0 rgba(159, 231, 245, 0.08);
+}
+
+/* ── Tables & Scrollbars ───────────────────────────────────────────────────── */
+.ocean-table thead tr {
+  border-bottom: 1px solid rgba(66, 158, 189, 0.25);
+  color: var(--text-muted);
+}
+
+.ocean-table tbody tr {
+  border-bottom: 1px solid rgba(66, 158, 189, 0.1);
+  transition: background-color 0.15s ease;
+}
+
+.ocean-table tbody tr:hover {
+  background-color: rgba(66, 158, 189, 0.12);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #021824;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(66, 158, 189, 0.45);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(159, 231, 245, 0.65);
+}

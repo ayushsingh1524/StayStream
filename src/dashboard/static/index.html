@@ -4,78 +4,99 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StayStream · Overview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/theme.css" />
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
+<body class="min-h-screen antialiased">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
     <!-- Header & Navigation -->
-    <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-800 pb-4">
+    <header class="glass-panel rounded-2xl px-5 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
       <div>
         <div class="flex items-center gap-3">
-          <span class="inline-flex h-3 w-3 rounded-full bg-emerald-400 animate-pulse"></span>
-          <h1 class="text-2xl font-bold tracking-tight text-white">StayStream Live</h1>
-          <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-            Kafka → PySpark → PostgreSQL
+          <span class="sonar-dot"></span>
+          <h1 class="text-2xl font-bold text-[#F0FAFC]">StayStream Live</h1>
+          <span class="text-[11px] font-mono-num px-2.5 py-0.5 rounded-full bg-[#053F5C]/80 text-[#9FE7F5] border border-[#429EBD]/40">
+            Kafka → PySpark → Postgres
           </span>
         </div>
-        <nav class="flex items-center gap-2 mt-3 text-sm">
-          <a href="/" class="px-3 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium">Overview</a>
-          <a href="/cities" class="px-3 py-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-900 transition">Cities</a>
-          <a href="/dlq" class="px-3 py-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-900 transition">DLQ Inspector</a>
-          <a href="/metrics" target="_blank" class="px-3 py-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-900 transition">/metrics</a>
+        <nav class="nav-shell inline-flex items-center gap-1.5 mt-3 p-1 rounded-xl text-xs">
+          <a href="/" class="nav-pill nav-pill-active px-3.5 py-1.5 rounded-lg">Overview</a>
+          <a href="/cities" class="nav-pill px-3.5 py-1.5 rounded-lg">Cities</a>
+          <a href="/dlq" class="nav-pill px-3.5 py-1.5 rounded-lg">DLQ Inspector</a>
+          <a href="/metrics" target="_blank" class="nav-pill px-3.5 py-1.5 rounded-lg font-mono-num">/metrics ↗</a>
         </nav>
       </div>
-      <div class="flex flex-wrap items-center gap-3 text-xs">
-        <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
-          <span class="text-slate-400">Spark Rate:</span>
-          <span id="spark-rate" class="font-semibold text-emerald-400 ml-1">0.0 rows/s</span>
+
+      <div class="flex flex-wrap items-center gap-2.5 text-xs">
+        <div class="telemetry-chip px-3 py-2 rounded-xl flex items-center gap-2">
+          <span class="text-[#8BB8CA]">Spark Rate</span>
+          <span id="spark-rate" class="font-mono-num font-semibold text-[#9FE7F5]">0.0 rows/s</span>
         </div>
-        <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
-          <span class="text-slate-400">Batch:</span>
-          <span id="spark-batch" class="font-semibold text-sky-400 ml-1">0 ms</span>
+        <div class="telemetry-chip px-3 py-2 rounded-xl flex items-center gap-2">
+          <span class="text-[#8BB8CA]">Batch</span>
+          <span id="spark-batch" class="font-mono-num font-semibold text-[#429EBD]">0 ms</span>
         </div>
-        <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
-          <span class="text-slate-400">Freshness:</span>
-          <span id="freshness" class="font-semibold text-slate-200 ml-1">—</span>
+        <div class="telemetry-chip px-3 py-2 rounded-xl flex items-center gap-2">
+          <span class="text-[#8BB8CA]">Freshness</span>
+          <span id="freshness" class="font-mono-num font-semibold text-[#F0FAFC]">—</span>
         </div>
       </div>
     </header>
 
     <!-- KPI Cards -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-        <div class="text-xs uppercase tracking-wider text-slate-400">Total Bookings</div>
-        <div id="kpi-bookings" class="text-3xl font-bold text-white mt-1">0</div>
-        <div class="text-xs text-emerald-400 mt-1">Deduplicated by event_id</div>
+      <div class="glass-panel glass-panel-hover kpi-card kpi-cyan rounded-2xl p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-widest text-[#8BB8CA] font-medium">Total Bookings</span>
+          <span class="text-[10px] font-mono-num px-2 py-0.5 rounded bg-[#429EBD]/20 text-[#9FE7F5]">DEDUPED</span>
+        </div>
+        <div id="kpi-bookings" class="font-mono-num text-3xl font-bold text-[#F0FAFC] mt-2">0</div>
+        <div class="text-xs text-[#9FE7F5]/80 mt-1.5">Unique event_id within watermark</div>
       </div>
-      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-        <div class="text-xs uppercase tracking-wider text-slate-400">Net Revenue (INR)</div>
-        <div id="kpi-revenue" class="text-3xl font-bold text-emerald-400 mt-1">₹0</div>
-        <div class="text-xs text-slate-400 mt-1">Created − Cancelled</div>
+
+      <div class="glass-panel glass-panel-hover kpi-card kpi-teal rounded-2xl p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-widest text-[#8BB8CA] font-medium">Net Revenue (INR)</span>
+          <span class="text-[10px] font-mono-num px-2 py-0.5 rounded bg-[#9FE7F5]/15 text-[#9FE7F5]">NET</span>
+        </div>
+        <div id="kpi-revenue" class="font-mono-num text-3xl font-bold text-[#9FE7F5] mt-2">₹0</div>
+        <div class="text-xs text-[#8BB8CA] mt-1.5">Created − Cancelled</div>
       </div>
-      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-        <div class="text-xs uppercase tracking-wider text-slate-400">Cancellations</div>
-        <div id="kpi-cancellations" class="text-3xl font-bold text-amber-400 mt-1">0</div>
-        <div id="kpi-latency" class="text-xs text-slate-400 mt-1">Avg latency: 0 ms</div>
+
+      <div class="glass-panel glass-panel-hover kpi-card kpi-amber rounded-2xl p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-widest text-[#8BB8CA] font-medium">Cancellations</span>
+          <span class="text-[10px] font-mono-num px-2 py-0.5 rounded bg-[#F7AD19]/20 text-[#F7AD19]">STATE</span>
+        </div>
+        <div id="kpi-cancellations" class="font-mono-num text-3xl font-bold text-[#F7AD19] mt-2">0</div>
+        <div id="kpi-latency" class="text-xs font-mono-num text-[#8BB8CA] mt-1.5">Avg latency: 0 ms</div>
       </div>
-      <a href="/dlq" class="block bg-slate-900/80 border border-slate-800 hover:border-rose-500/40 rounded-xl p-4 transition">
-        <div class="text-xs uppercase tracking-wider text-slate-400">Dead-Letter Queue</div>
-        <div id="kpi-dlq" class="text-3xl font-bold text-rose-400 mt-1">0</div>
-        <div class="text-xs text-slate-400 mt-1">Click to inspect malformed events →</div>
+
+      <a href="/dlq" class="block glass-panel glass-panel-hover kpi-card kpi-coral rounded-2xl p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-widest text-[#8BB8CA] font-medium">Dead-Letter Queue</span>
+          <span class="text-[10px] font-mono-num px-2 py-0.5 rounded bg-[#F7AD19]/15 text-[#F7AD19]">INSPECT →</span>
+        </div>
+        <div id="kpi-dlq" class="font-mono-num text-3xl font-bold text-[#F7AD19] mt-2">0</div>
+        <div class="text-xs text-[#8BB8CA] mt-1.5">Malformed &amp; rejected payloads</div>
       </a>
     </section>
 
     <!-- Active Alerts Banner -->
     <section id="alerts-section" class="hidden">
-      <div class="bg-amber-950/60 border border-amber-700/50 rounded-xl p-4">
+      <div class="alert-banner rounded-2xl p-4">
         <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <span class="inline-flex h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-            <h2 class="text-sm font-semibold text-amber-200">Anomaly Alerts</h2>
-            <span id="alert-count-badge" class="text-xs px-2 py-0.5 rounded bg-amber-900 text-amber-300 border border-amber-700">0</span>
+          <div class="flex items-center gap-2.5">
+            <span class="sonar-dot sonar-dot-amber"></span>
+            <h2 class="text-sm font-semibold text-[#F7AD19]">Real-Time Anomaly Alerts</h2>
+            <span id="alert-count-badge" class="text-xs font-mono-num px-2 py-0.5 rounded-full bg-[#F7AD19]/20 text-[#F7AD19] border border-[#F7AD19]/40">0</span>
           </div>
+          <span class="text-[11px] font-mono-num text-[#8BB8CA]">Cancel rate ≥ 25% threshold</span>
         </div>
         <div id="alerts-list" class="space-y-2 text-xs"></div>
       </div>
@@ -83,17 +104,24 @@
 
     <!-- Charts -->
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-semibold text-slate-200">Revenue by City</h2>
-          <a href="/cities" class="text-xs text-sky-400 hover:underline">Full Leaderboard →</a>
+      <div class="glass-panel rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-sm font-semibold text-[#F0FAFC]">Revenue by City</h2>
+            <p class="text-xs text-[#8BB8CA]">Net aggregated INR per destination</p>
+          </div>
+          <a href="/cities" class="text-xs font-medium text-[#9FE7F5] hover:text-[#F7AD19] transition">Full Leaderboard →</a>
         </div>
         <div class="h-72">
           <canvas id="cityChart"></canvas>
         </div>
       </div>
-      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5">
-        <h2 class="text-sm font-semibold text-slate-200 mb-3">Bookings &amp; Cancellations per Minute</h2>
+
+      <div class="glass-panel rounded-2xl p-5">
+        <div class="mb-4">
+          <h2 class="text-sm font-semibold text-[#F0FAFC]">Bookings &amp; Cancellations per Minute</h2>
+          <p class="text-xs text-[#8BB8CA]">1-minute tumbling event-time windows</p>
+        </div>
         <div class="h-72">
           <canvas id="trendChart"></canvas>
         </div>

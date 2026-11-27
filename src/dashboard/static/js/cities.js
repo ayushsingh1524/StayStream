@@ -1,21 +1,47 @@
-import { fetchJSON, fmtINR, updateHealthBanner } from "/static/js/common.js";
+import {
+  CHART_TOOLTIP_THEME,
+  PALETTE,
+  fetchJSON,
+  fmtINR,
+  makeVerticalGradient,
+  updateHealthBanner,
+} from "/static/js/common.js";
 
 const volumeChart = new Chart(document.getElementById("cityVolumeChart"), {
   type: "bar",
   data: {
     labels: [],
     datasets: [
-      { label: "Bookings", data: [], backgroundColor: "#38bdf8", borderRadius: 4 },
-      { label: "Cancellations", data: [], backgroundColor: "#fbbf24", borderRadius: 4 },
+      {
+        label: "Bookings",
+        data: [],
+        backgroundColor: (ctx) =>
+          makeVerticalGradient(ctx, "rgba(159, 231, 245, 0.95)", "rgba(66, 158, 189, 0.5)"),
+        borderColor: PALETTE.iceCyan,
+        borderWidth: 1,
+        borderRadius: 6,
+      },
+      {
+        label: "Cancellations",
+        data: [],
+        backgroundColor: (ctx) =>
+          makeVerticalGradient(ctx, "rgba(247, 173, 25, 0.95)", "rgba(247, 173, 25, 0.4)"),
+        borderColor: PALETTE.amberGold,
+        borderWidth: 1,
+        borderRadius: 6,
+      },
     ],
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: "#cbd5e1" } } },
+    plugins: {
+      legend: { labels: { color: PALETTE.textPrimary, usePointStyle: true } },
+      tooltip: CHART_TOOLTIP_THEME,
+    },
     scales: {
-      x: { ticks: { color: "#94a3b8" }, grid: { display: false } },
-      y: { ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } },
+      x: { ticks: { color: PALETTE.textMuted }, grid: { display: false } },
+      y: { ticks: { color: PALETTE.textMuted }, grid: { color: PALETTE.gridLine } },
     },
   },
 });
@@ -39,13 +65,13 @@ async function refreshCities() {
         const total = (c.bookings || 0) + (c.cancellations || 0);
         const cancelPct = total > 0 ? (((c.cancellations || 0) / total) * 100).toFixed(1) : "0.0";
         return `
-          <tr class="hover:bg-slate-800/40">
-            <td class="py-2.5 pr-3 font-medium text-white">${c.city}</td>
-            <td class="py-2.5 pr-3 text-right">${(c.bookings || 0).toLocaleString()}</td>
-            <td class="py-2.5 pr-3 text-right text-amber-400">${(c.cancellations || 0).toLocaleString()}</td>
-            <td class="py-2.5 pr-3 text-right text-slate-300">${cancelPct}%</td>
-            <td class="py-2.5 pr-3 text-right text-emerald-400 font-medium">${fmtINR(c.revenue)}</td>
-            <td class="py-2.5 text-right text-slate-400">${Math.round(c.avg_latency_ms || 0)} ms</td>
+          <tr>
+            <td class="py-3 pr-3 font-sans font-semibold text-[#F0FAFC]">${c.city}</td>
+            <td class="py-3 pr-3 text-right text-[#F0FAFC]">${(c.bookings || 0).toLocaleString()}</td>
+            <td class="py-3 pr-3 text-right text-[#F7AD19]">${(c.cancellations || 0).toLocaleString()}</td>
+            <td class="py-3 pr-3 text-right text-[#8BB8CA]">${cancelPct}%</td>
+            <td class="py-3 pr-3 text-right text-[#9FE7F5] font-semibold">${fmtINR(c.revenue)}</td>
+            <td class="py-3 text-right text-[#8BB8CA]">${Math.round(c.avg_latency_ms || 0)} ms</td>
           </tr>
         `;
       })

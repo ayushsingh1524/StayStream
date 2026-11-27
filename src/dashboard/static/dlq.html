@@ -4,47 +4,52 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StayStream · DLQ Inspector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/theme.css" />
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
+<body class="min-h-screen antialiased">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
     <!-- Header & Navigation -->
-    <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-800 pb-4">
+    <header class="glass-panel rounded-2xl px-5 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
       <div>
         <div class="flex items-center gap-3">
-          <span class="inline-flex h-3 w-3 rounded-full bg-rose-400 animate-pulse"></span>
-          <h1 class="text-2xl font-bold tracking-tight text-white">StayStream · DLQ Inspector</h1>
+          <span class="sonar-dot sonar-dot-amber"></span>
+          <h1 class="text-2xl font-bold text-[#F0FAFC]">StayStream · DLQ Inspector</h1>
         </div>
-        <nav class="flex items-center gap-2 mt-3 text-sm">
-          <a href="/" class="px-3 py-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-900 transition">Overview</a>
-          <a href="/cities" class="px-3 py-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-900 transition">Cities</a>
-          <a href="/dlq" class="px-3 py-1 rounded-md bg-rose-500/15 text-rose-300 border border-rose-500/30 font-medium">DLQ Inspector</a>
-          <a href="/metrics" target="_blank" class="px-3 py-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-900 transition">/metrics</a>
+        <nav class="nav-shell inline-flex items-center gap-1.5 mt-3 p-1 rounded-xl text-xs">
+          <a href="/" class="nav-pill px-3.5 py-1.5 rounded-lg">Overview</a>
+          <a href="/cities" class="nav-pill px-3.5 py-1.5 rounded-lg">Cities</a>
+          <a href="/dlq" class="nav-pill nav-pill-active px-3.5 py-1.5 rounded-lg">DLQ Inspector</a>
+          <a href="/metrics" target="_blank" class="nav-pill px-3.5 py-1.5 rounded-lg font-mono-num">/metrics ↗</a>
         </nav>
       </div>
-      <div class="flex flex-wrap items-center gap-3 text-xs">
-        <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
-          <span class="text-slate-400">Spark Rate:</span>
-          <span id="spark-rate" class="font-semibold text-emerald-400 ml-1">0.0 rows/s</span>
+
+      <div class="flex flex-wrap items-center gap-2.5 text-xs">
+        <div class="telemetry-chip px-3 py-2 rounded-xl flex items-center gap-2">
+          <span class="text-[#8BB8CA]">Spark Rate</span>
+          <span id="spark-rate" class="font-mono-num font-semibold text-[#9FE7F5]">0.0 rows/s</span>
         </div>
-        <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
-          <span class="text-slate-400">Batch:</span>
-          <span id="spark-batch" class="font-semibold text-sky-400 ml-1">0 ms</span>
+        <div class="telemetry-chip px-3 py-2 rounded-xl flex items-center gap-2">
+          <span class="text-[#8BB8CA]">Batch</span>
+          <span id="spark-batch" class="font-mono-num font-semibold text-[#429EBD]">0 ms</span>
         </div>
-        <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
-          <span class="text-slate-400">Freshness:</span>
-          <span id="freshness" class="font-semibold text-slate-200 ml-1">—</span>
+        <div class="telemetry-chip px-3 py-2 rounded-xl flex items-center gap-2">
+          <span class="text-[#8BB8CA]">Freshness</span>
+          <span id="freshness" class="font-mono-num font-semibold text-[#F0FAFC]">—</span>
         </div>
       </div>
     </header>
 
     <!-- Breakdown & Filter -->
-    <section class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div id="dlq-badges" class="flex flex-wrap gap-2 text-xs"></div>
-      <div class="flex items-center gap-2 text-xs">
-        <label for="reason-filter" class="text-slate-400">Filter by reason:</label>
-        <select id="reason-filter" class="bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-slate-200">
+    <section class="glass-panel rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div id="dlq-badges" class="flex flex-wrap gap-2 text-xs font-mono-num"></div>
+      <div class="flex items-center gap-2.5 text-xs">
+        <label for="reason-filter" class="text-[#8BB8CA]">Filter by reason:</label>
+        <select id="reason-filter" class="bg-[#021824] border border-[#429EBD]/40 rounded-lg px-3 py-1.5 text-[#F0FAFC] focus:outline-none focus:border-[#9FE7F5]">
           <option value="">All reasons</option>
           <option value="invalid_json">invalid_json</option>
           <option value="missing_required_field">missing_required_field</option>
@@ -55,17 +60,17 @@
     </section>
 
     <!-- DLQ Table -->
-    <section class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 overflow-x-auto">
-      <table class="w-full text-xs text-left">
-        <thead class="uppercase text-slate-400 border-b border-slate-800">
+    <section class="glass-panel rounded-2xl p-5 overflow-x-auto">
+      <table class="ocean-table w-full text-xs text-left">
+        <thead class="uppercase tracking-wider">
           <tr>
-            <th class="py-2 pr-3">ID</th>
-            <th class="py-2 pr-3">Reason</th>
-            <th class="py-2 pr-3">Received At</th>
-            <th class="py-2">Raw Payload</th>
+            <th class="py-2.5 pr-3">ID</th>
+            <th class="py-2.5 pr-3">Reason</th>
+            <th class="py-2.5 pr-3">Received At</th>
+            <th class="py-2.5">Raw Payload</th>
           </tr>
         </thead>
-        <tbody id="dlq-table" class="divide-y divide-slate-800/70 font-mono"></tbody>
+        <tbody id="dlq-table" class="font-mono-num"></tbody>
       </table>
     </section>
 

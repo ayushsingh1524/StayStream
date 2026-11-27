@@ -22,23 +22,23 @@ async function refreshDLQ() {
 
     document.getElementById("dlq-badges").innerHTML = (dlq.breakdown || [])
       .map((b) => {
-        const cls = REASON_COLORS[b.reason] || "bg-slate-800 text-slate-300 border-slate-700";
-        return `<span class="px-2.5 py-1 rounded border ${cls}">${b.reason}: ${b.count}</span>`;
+        const cls = REASON_COLORS[b.reason] || "bg-[#053F5C]/70 text-[#9FE7F5] border-[#429EBD]/40";
+        return `<span class="px-3 py-1 rounded-full border ${cls}">${b.reason}: ${b.count}</span>`;
       })
       .join("");
 
     document.getElementById("dlq-table").innerHTML = (dlq.items || [])
       .map((d) => {
-        const cls = REASON_COLORS[d.reason] || "bg-slate-800 text-slate-300 border-slate-700";
+        const cls = REASON_COLORS[d.reason] || "bg-[#053F5C]/70 text-[#9FE7F5] border-[#429EBD]/40";
         const timeStr = d.received_at
           ? new Date(d.received_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
           : "—";
         return `
-          <tr class="hover:bg-slate-800/40">
-            <td class="py-2 pr-3 text-slate-400">#${d.id}</td>
-            <td class="py-2 pr-3"><span class="px-2 py-0.5 rounded border ${cls}">${escapeHTML(d.reason)}</span></td>
-            <td class="py-2 pr-3 text-slate-400 whitespace-nowrap">${timeStr}</td>
-            <td class="py-2 text-slate-200 break-all">${escapeHTML(d.raw_value)}</td>
+          <tr>
+            <td class="py-2.5 pr-3 text-[#8BB8CA]">#${d.id}</td>
+            <td class="py-2.5 pr-3"><span class="px-2.5 py-0.5 rounded-full border ${cls}">${escapeHTML(d.reason)}</span></td>
+            <td class="py-2.5 pr-3 text-[#8BB8CA] whitespace-nowrap">${timeStr}</td>
+            <td class="py-2.5 text-[#F0FAFC] break-all">${escapeHTML(d.raw_value)}</td>
           </tr>
         `;
       })

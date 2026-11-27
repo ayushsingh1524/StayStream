@@ -1,4 +1,13 @@
-import { fetchJSON, fmtINR, updateHealthBanner, escapeHTML } from "/static/js/common.js";
+import {
+  CHART_TOOLTIP_THEME,
+  PALETTE,
+  escapeHTML,
+  fetchJSON,
+  fmtINR,
+  makeVerticalGradient,
+  setKpiText,
+  updateHealthBanner,
+} from "/static/js/common.js";
 
 const cityChart = new Chart(document.getElementById("cityChart"), {
   type: "bar",
@@ -8,18 +17,26 @@ const cityChart = new Chart(document.getElementById("cityChart"), {
       {
         label: "Revenue (INR)",
         data: [],
-        backgroundColor: "#34d399",
-        borderRadius: 6,
+        backgroundColor: (ctx) =>
+          makeVerticalGradient(ctx, "rgba(159, 231, 245, 0.95)", "rgba(66, 158, 189, 0.45)"),
+        hoverBackgroundColor: PALETTE.amberGold,
+        borderColor: PALETTE.iceCyan,
+        borderWidth: 1,
+        borderRadius: 8,
+        borderSkipped: false,
       },
     ],
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: { display: false },
+      tooltip: CHART_TOOLTIP_THEME,
+    },
     scales: {
-      x: { ticks: { color: "#94a3b8" }, grid: { display: false } },
-      y: { ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } },
+      x: { ticks: { color: PALETTE.textMuted }, grid: { display: false } },
+      y: { ticks: { color: PALETTE.textMuted }, grid: { color: PALETTE.gridLine } },
     },
   },
 });
@@ -32,28 +49,41 @@ const trendChart = new Chart(document.getElementById("trendChart"), {
       {
         label: "Bookings",
         data: [],
-        borderColor: "#38bdf8",
-        backgroundColor: "rgba(56,189,248,0.15)",
+        borderColor: PALETTE.iceCyan,
+        backgroundColor: (ctx) =>
+          makeVerticalGradient(ctx, "rgba(159, 231, 245, 0.35)", "rgba(5, 63, 92, 0.02)"),
+        pointBackgroundColor: PALETTE.iceCyan,
+        pointBorderColor: "#021824",
+        pointRadius: 3,
+        pointHoverRadius: 5,
         fill: true,
-        tension: 0.3,
+        tension: 0.35,
       },
       {
         label: "Cancellations",
         data: [],
-        borderColor: "#fbbf24",
-        backgroundColor: "rgba(251,191,36,0.1)",
-        fill: false,
-        tension: 0.3,
+        borderColor: PALETTE.amberGold,
+        backgroundColor: (ctx) =>
+          makeVerticalGradient(ctx, "rgba(247, 173, 25, 0.28)", "rgba(247, 173, 25, 0.0)"),
+        pointBackgroundColor: PALETTE.amberGold,
+        pointBorderColor: "#021824",
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        fill: true,
+        tension: 0.35,
       },
     ],
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: "#cbd5e1" } } },
+    plugins: {
+      legend: { labels: { color: PALETTE.textPrimary, usePointStyle: true } },
+      tooltip: CHART_TOOLTIP_THEME,
+    },
     scales: {
-      x: { ticks: { color: "#94a3b8", maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } },
+      x: { ticks: { color: PALETTE.textMuted, maxTicksLimit: 8 }, grid: { display: false } },
+      y: { ticks: { color: PALETTE.textMuted }, grid: { color: PALETTE.gridLine } },
     },
   },
 });
@@ -79,13 +109,13 @@ function renderAlerts(alerts) {
         ? new Date(a.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
         : "—";
       return `
-        <div class="flex items-center justify-between bg-amber-950/40 border border-amber-800/40 rounded-lg px-3 py-2">
-          <div class="flex items-center gap-3">
-            <span class="text-amber-400 font-semibold">${escapeHTML(a.city)}</span>
-            <span class="text-amber-300/70">Cancel rate: ${rate}%</span>
-            <span class="text-slate-500">Bookings: ${details.bookings || 0} · Cancellations: ${details.cancellations || 0}</span>
+        <div class="flex items-center justify-between bg-[#021824]/65 border border-[#F7AD19]/35 rounded-xl px-3.5 py-2.5">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="text-[#F7AD19] font-semibold">${escapeHTML(a.city)}</span>
+            <span class="font-mono-num text-[#9FE7F5]">Cancel rate: ${rate}%</span>
+            <span class="font-mono-num text-[#8BB8CA]">Bookings: ${details.bookings || 0} · Cancellations: ${details.cancellations || 0}</span>
           </div>
-          <span class="text-slate-500 whitespace-nowrap">${time}</span>
+          <span class="font-mono-num text-[#8BB8CA] whitespace-nowrap">${time}</span>
         </div>
       `;
     })
@@ -102,11 +132,11 @@ async function refreshOverview() {
     ]);
 
     updateHealthBanner(summary);
-    document.getElementById("kpi-bookings").textContent = (summary.total_bookings || 0).toLocaleString();
-    document.getElementById("kpi-revenue").textContent = fmtINR(summary.total_revenue);
-    document.getElementById("kpi-cancellations").textContent = (summary.total_cancellations || 0).toLocaleString();
-    document.getElementById("kpi-latency").textContent = `Avg latency: ${Math.round(summary.avg_latency_ms || 0)} ms`;
-    document.getElementById("kpi-dlq").textContent = (summary.dlq_count || 0).toLocaleString();
+    setKpiText("kpi-bookings", (summary.total_bookings || 0).toLocaleString());
+    setKpiText("kpi-revenue", fmtINR(summary.total_revenue));
+    setKpiText("kpi-cancellations", (summary.total_cancellations || 0).toLocaleString());
+    setKpiText("kpi-latency", `Avg latency: ${Math.round(summary.avg_latency_ms || 0)} ms`);
+    setKpiText("kpi-dlq", (summary.dlq_count || 0).toLocaleString());
 
     cityChart.data.labels = cities.map((c) => c.city);
     cityChart.data.datasets[0].data = cities.map((c) => c.revenue);
